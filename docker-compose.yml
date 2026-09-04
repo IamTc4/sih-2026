@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  blockchain:
+    build:
+      context: ./blockchain
+    container_name: walletrace-blockchain
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - USE_MOCK_DATA=true
+    restart: unless-stopped
+
+  agentic-ai:
+    build:
+      context: ./SIH-26-27-master/Agentic_Ai
+    container_name: walletrace-agentic-ai
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - HOST=0.0.0.0
+      - BLOCKCHAIN_API_URL=http://blockchain:8000
+      - ML_API_URL=http://ml-risk:8002
+      - CYBERSECURITY_API_URL=http://cybersecurity:8003
+      - CONFIDENCE_THRESHOLD=0.75
+    depends_on:
+      - blockchain
+      - ml-risk
+    restart: unless-stopped
+
+  ml-risk:
+    build:
+      context: ./ML
+    container_name: walletrace-ml-risk
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - HOST=0.0.0.0
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./Dashboard
+    container_name: walletrace-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - blockchain
+      - agentic-ai
+      - ml-risk
+    restart: unless-stopped
