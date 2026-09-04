@@ -57,19 +57,24 @@ Start-Service-Window `
 Start-Sleep -Seconds 2
 
 # ── 3. Agentic AI (port 8001) ─────────────────────────────────────────────
-$agentDir = "$ROOT\SIH-26-27-master\Agentic_Ai"
-if (-not (Test-Path $agentDir)) {
-    $agentDir = "$ROOT\Agentic_Ai"
-}
 Start-Service-Window `
     -Name "Agentic AI (port 8001)" `
-    -Dir  $agentDir `
+    -Dir  "$ROOT\Agentic_Ai" `
     -Command "python -m uvicorn walletrace.api:app --host 0.0.0.0 --port 8001 --reload" `
     -Color "Green"
 
 Start-Sleep -Seconds 2
 
-# ── 4. Dashboard (port 3000) ───────────────────────────────────────────────
+# ── 4. Cybersecurity (port 8003) ──────────────────────────────────────────
+Start-Service-Window `
+    -Name "Cybersecurity & Evidence Vault (port 8003)" `
+    -Dir  "$ROOT\Cybersecurity" `
+    -Command "python main.py" `
+    -Color "DarkYellow"
+
+Start-Sleep -Seconds 2
+
+# ── 5. Dashboard (port 3000) ───────────────────────────────────────────────
 Start-Service-Window `
     -Name "Dashboard (port 3000)" `
     -Dir  "$ROOT\Dashboard" `
@@ -81,17 +86,16 @@ Start-Sleep -Seconds 3
 # ── Summary ────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "======================================================" -ForegroundColor Cyan
-Write-Host "  All services started! URLs:" -ForegroundColor Green
+Write-Host "  All 5 services started! URLs:" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Dashboard         → http://localhost:3000" -ForegroundColor Yellow
 Write-Host "  Blockchain API    → http://localhost:8000/docs" -ForegroundColor Blue
 Write-Host "  Agentic AI API    → http://localhost:8001/docs" -ForegroundColor Green
 Write-Host "  ML Risk Scoring   → http://localhost:8002/docs" -ForegroundColor Magenta
-Write-Host ""
-Write-Host "  Cybersecurity     → port 8003 (integrate when ready)" -ForegroundColor Gray
+Write-Host "  Cybersecurity     → http://localhost:8003/docs" -ForegroundColor DarkYellow
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Open dashboard in browser after short delay
-Start-Sleep -Seconds 5
+Start-Sleep -Seconds 4
 Start-Process "http://localhost:3000"

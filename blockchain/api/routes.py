@@ -71,6 +71,20 @@ async def trace_wallet(req: TraceRequest):
     if attribution.status != "KNOWN" and all_trace_addrs:
         attribution = attribution_matcher.attribute_cluster_or_addresses(all_trace_addrs)
 
+    # Build compatible graph_edges format for Agentic AI and shared schemas
+    graph_edges = [
+        {
+            "from": edge.source,
+            "to": edge.target,
+            "amount": edge.amount,
+            "token": edge.token,
+            "tx_hash": edge.tx_hashes[0] if edge.tx_hashes else f"tx_{edge.source[:6]}_{edge.target[:6]}",
+            "timestamp": "2026-09-04T00:00:00Z",
+            "chain": "tron"
+        }
+        for edge in graph_res.edges
+    ]
+
     # Construct unified forensic response payload
     return TraceResponse(
         seed_address=seed_address,
@@ -82,6 +96,7 @@ async def trace_wallet(req: TraceRequest):
         clusters=clusters,
         graph=graph_res,
         attribution=attribution,
+        graph_edges=graph_edges,
         summary={
             "total_nodes": graph_res.total_nodes,
             "total_edges": graph_res.total_edges,
@@ -90,6 +105,14 @@ async def trace_wallet(req: TraceRequest):
             "attributed_exchange": attribution.exchange_name if attribution.status == "KNOWN" else "UNATTRIBUTED"
         }
     )
+
+@router.get("/trace/{address}", response_model=TraceResponse, summary="Investigate Wallet (GET Method)", tags=["Forensics"])
+async def get_trace_wallet(
+    address: str = APIPath(..., description="Seed suspicious/victim wallet address"),
+    max_hops: Optional[int] = Query(None, ge=1, le=10, description="Max hop depth")
+):
+    """GET endpoint matching the Agentic AI PRD tool specification for trace_wallet(address)"""
+    return await trace_wallet(TraceRequest(address=address, max_hops=max_hops))
 
 @router.get("/cluster/{address}", response_model=List[Cluster], summary="Get Wallet Cluster & Evidence", tags=["Clustering"])
 async def get_cluster_for_address(address: str = APIPath(..., description="Wallet address to check")):

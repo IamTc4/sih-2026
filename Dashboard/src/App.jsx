@@ -6,41 +6,39 @@ import InvestigationView from './views/InvestigationView'
 import BankGatewayView   from './views/BankGatewayView'
 import AuditTrailView    from './views/AuditTrailView'
 import ModelInfoView     from './views/ModelInfoView'
+import EvidenceIntakeView from './views/EvidenceIntakeView'
+import ActiveCasesView    from './views/ActiveCasesView'
+import LegalNoticeView    from './views/LegalNoticeView'
 
 const VIEW_LABELS = {
-  'investigation':  'Investigation View',
-  'active-cases':   'Active Cases',
-  'forensic-graph': 'Forensic Graph',
-  'exchange-intel': 'Exchange Intelligence',
-  'evidence-vault': 'Evidence Vault',
-  'bank-gateway':   'Simulated Bank Gateway',
-  'audit-trail':    'Audit Trail Ledger',
-  'model-info':     'ML Model Card',
-}
-
-function PlaceholderView({ id }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-space-md text-on-surface-variant">
-      <div className="text-5xl opacity-20">🔒</div>
-      <h2 className="font-headline-md text-headline-md font-bold text-on-surface">{VIEW_LABELS[id]}</h2>
-      <p className="font-body-base text-body-base text-center max-w-sm">
-        This view is part of the full integration build.
-        Go to <strong className="text-primary">Investigation View</strong> or <strong className="text-primary">Simulated Bank Gateway</strong> for live demos.
-      </p>
-    </div>
-  )
+  'investigation':    'Investigation View',
+  'evidence-intake':  'Evidence Intake (NCRP & OCR)',
+  'active-cases':     'Active Cases Registry',
+  'legal-notice':     'Section 91 CrPC Notice',
+  'bank-gateway':     'Simulated Bank Gateway',
+  'audit-trail':      'Audit Trail Ledger',
+  'model-info':       'ML Model Transparency Card',
 }
 
 export default function App() {
   const [view, setView] = useState('investigation')
+  const [selectedWallet, setSelectedWallet] = useState(null)
+
+  const handleLaunchInvestigation = (wallet) => {
+    setSelectedWallet(wallet)
+    setView('investigation')
+  }
 
   const renderView = () => {
     switch (view) {
-      case 'investigation':  return <InvestigationView />
-      case 'bank-gateway':   return <div className="overflow-y-auto h-full"><div className="p-space-base"><BankGatewayView /></div></div>
-      case 'audit-trail':    return <div className="overflow-y-auto h-full"><AuditTrailView /></div>
-      case 'model-info':     return <div className="overflow-y-auto h-full"><ModelInfoView /></div>
-      default:               return <PlaceholderView id={view} />
+      case 'investigation':    return <InvestigationView initialWallet={selectedWallet} />
+      case 'evidence-intake':  return <div className="overflow-y-auto h-full"><EvidenceIntakeView onLaunchInvestigation={handleLaunchInvestigation} /></div>
+      case 'active-cases':     return <div className="overflow-y-auto h-full"><ActiveCasesView onSelectCase={handleLaunchInvestigation} /></div>
+      case 'legal-notice':     return <div className="overflow-y-auto h-full"><LegalNoticeView initialWallet={selectedWallet || 'T_VICTIM_SIH_DEMO_999'} /></div>
+      case 'bank-gateway':     return <div className="overflow-y-auto h-full"><div className="p-space-base"><BankGatewayView /></div></div>
+      case 'audit-trail':      return <div className="overflow-y-auto h-full"><AuditTrailView /></div>
+      case 'model-info':       return <div className="overflow-y-auto h-full"><ModelInfoView /></div>
+      default:                 return <InvestigationView />
     }
   }
 

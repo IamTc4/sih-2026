@@ -104,3 +104,4 @@ class TraceResponse(BaseModel):
     graph: GraphResponse
     attribution: AttributionResult
     summary: Dict[str, Any] = Field(default_factory=dict)
+    graph_edges: List[Dict[str, Any]] = Field(default_factory=list)

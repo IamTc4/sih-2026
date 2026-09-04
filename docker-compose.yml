@@ -15,7 +15,7 @@ services:
 
   agentic-ai:
     build:
-      context: ./SIH-26-27-master/Agentic_Ai
+      context: ./Agentic_Ai
     container_name: walletrace-agentic-ai
     ports:
       - "8001:8001"
@@ -29,6 +29,7 @@ services:
     depends_on:
       - blockchain
       - ml-risk
+      - cybersecurity
     restart: unless-stopped
 
   ml-risk:
@@ -42,6 +43,17 @@ services:
       - HOST=0.0.0.0
     restart: unless-stopped
 
+  cybersecurity:
+    build:
+      context: ./Cybersecurity
+    container_name: walletrace-cybersecurity
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - HOST=0.0.0.0
+    restart: unless-stopped
+
   dashboard:
     build:
       context: ./Dashboard
@@ -52,4 +64,5 @@ services:
       - blockchain
       - agentic-ai
       - ml-risk
+      - cybersecurity
     restart: unless-stopped

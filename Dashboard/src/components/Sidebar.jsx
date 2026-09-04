@@ -2,14 +2,13 @@
 import React from 'react'
 
 const NAV = [
-  { id: 'investigation',  label: 'Investigation View',       group: 'TACTICAL OPERATIONS' },
-  { id: 'active-cases',   label: 'Active Cases',             group: 'TACTICAL OPERATIONS', badge: '14' },
-  { id: 'forensic-graph', label: 'Forensic Graph',           group: 'TACTICAL OPERATIONS' },
-  { id: 'exchange-intel', label: 'Exchange Intelligence',    group: 'TACTICAL OPERATIONS' },
-  { id: 'evidence-vault', label: 'Evidence Vault',           group: 'TACTICAL OPERATIONS' },
-  { id: 'bank-gateway',   label: 'Simulated Bank Gateway',   group: 'SIMULATION & SANDBOX' },
-  { id: 'audit-trail',    label: 'Audit Trail Ledger',       group: 'SIMULATION & SANDBOX' },
-  { id: 'model-info',     label: 'ML Model Card',            group: 'SIMULATION & SANDBOX' },
+  { id: 'investigation',    label: 'Investigation View',         group: 'TACTICAL OPERATIONS' },
+  { id: 'evidence-intake',  label: 'Evidence Intake (NCRP & OCR)', group: 'TACTICAL OPERATIONS', badge: 'NEW' },
+  { id: 'active-cases',     label: 'Active Cases Registry',      group: 'TACTICAL OPERATIONS', badge: '4' },
+  { id: 'legal-notice',     label: 'Section 91 CrPC Notice',     group: 'LEGAL & ENFORCEMENT' },
+  { id: 'bank-gateway',     label: 'Simulated Bank Gateway',     group: 'LEGAL & ENFORCEMENT' },
+  { id: 'audit-trail',      label: 'Audit Trail Ledger',         group: 'COMPLIANCE & AUDIT' },
+  { id: 'model-info',       label: 'ML Model Transparency Card', group: 'COMPLIANCE & AUDIT' },
 ]
 
 export default function Sidebar({ active, onNav }) {
