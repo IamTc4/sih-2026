@@ -41,3 +41,5 @@ class WalletTraceState(TypedDict, total=False):
     response_text: str            # LLM-generated, grounded natural-language response
     citations: List[dict]         # Structured citation objects for the API response
     error: Optional[str]          # Set by any node that encounters a fatal error
+    
+    related_cases: list[dict]  # populated by node_correlate

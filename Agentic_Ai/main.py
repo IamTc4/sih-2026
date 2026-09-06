@@ -10,7 +10,7 @@ Usage:
 
 import argparse
 import uvicorn
-
+from walletrace.case_store import init_db
 
 def main():
     parser = argparse.ArgumentParser(description="WalletTrace Agentic Orchestration Service")
@@ -19,6 +19,8 @@ def main():
     parser.add_argument("--reload", action="store_true", help="Enable hot reload (dev mode)")
     args = parser.parse_args()
 
+    init_db()
+    
     print(f"\n{'='*60}")
     print("  WalletTrace — Agentic Orchestration Module")
     print("  SIH26183 | Real-time Crypto Fraud Investigation")

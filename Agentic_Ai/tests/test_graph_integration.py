@@ -29,7 +29,16 @@ from walletrace.security import sanitize_tool_output
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
-
+@pytest.fixture(autouse=True)
+def isolated_case_db(monkeypatch, tmp_path):
+    from walletrace import case_store
+    db_file = tmp_path / "test_cases.db"
+    monkeypatch.setattr(case_store, "DB_PATH", str(db_file))
+    case_store.init_db()
+    yield
+    
+    
+    
 def _mock_llm_response(content: str = "Mocked LLM response with [source: mock_tool]"):
     """Return a mock LangChain chat model that returns `content`."""
     mock_msg = MagicMock()
@@ -355,4 +364,36 @@ class TestScopeRefusal:
         assert final_state.get("tool_evidence", {}) == {} or \
                "trace_wallet" not in final_state.get("tool_evidence", {}), (
             "trace_wallet must not be called for out-of-scope queries"
+        )
+
+    @pytest.mark.asyncio
+    async def test_node_correlate_integration(self):
+        """Proves node_correlate correctly populates related_cases in graph state."""
+        from walletrace.case_store import save_case
+        from walletrace.tools.mocks import get_cluster
+        
+        existing_case = "CASE-EXISTING-999"
+        # Use an address that generates predictable cluster addresses from mocks
+        target_addr = "0x1234567890ABCDEF1234567890ABCDEF129F2E1D"
+        
+        # Pre-seed the case store with the exact cluster addresses that get_cluster returns for this address
+        cluster_data = get_cluster(target_addr)
+        cluster_addresses = cluster_data.get("addresses", [target_addr])
+        save_case(existing_case, cluster_addresses, exchange="TestEx")
+
+        graph = build_graph()
+        initial_state = {
+            "session_id": "TEST-CORRELATION-SESSION",
+            "original_message": f"Trace {target_addr}",
+            "tool_evidence": {},
+        }
+        config = {"configurable": {"thread_id": "TEST-CORRELATION-SESSION"}}
+
+        with patch("walletrace.graph._build_llm", return_value=_mock_llm_response("Correlation found.")):
+            final_state = await graph.ainvoke(initial_state, config=config)
+
+        # Verify related_cases captured the overlap
+        related = final_state.get("related_cases", [])
+        assert any(c["case_id"] == existing_case for c in related), (
+            f"Expected {existing_case} in related_cases, got: {related}"
         )

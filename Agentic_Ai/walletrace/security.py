@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import re
 from typing import Any
-
 from walletrace.config import INJECTION_PATTERNS
 
 # ── System-prompt boundary injected into every LLM call ───────────────────
@@ -130,25 +129,8 @@ def build_grounded_prompt(
     question: str,
     tool_evidence: dict[str, str],
     routing_decision: str,
+    related_cases: list[dict] | None = None,
 ) -> str:
-    """
-    Construct the prompt for the final response-generation LLM call.
-
-    Parameters
-    ----------
-    question : str
-        The investigator's original question / wallet address submission.
-    tool_evidence : dict[str, str]
-        Mapping of tool_name -> sanitised tool output string.
-        Only facts present here may be stated in the response.
-    routing_decision : str
-        "draft_notice" or "manual_review" — controls response tone.
-
-    Returns
-    -------
-    str
-        A fully assembled prompt ready for the LLM.
-    """
     evidence_block = "\n\n".join(
         f"### {name}\n{output}" for name, output in tool_evidence.items()
     )
@@ -167,16 +149,23 @@ def build_grounded_prompt(
             "legal notice. Cite each fact with its tool source."
         )
 
+    related_cases_block = ""
+    if related_cases:
+        related_cases_block = "\n\nRELATED CASES (from case correlation):\n"
+        for rc in related_cases:
+            related_cases_block += (
+                f"- Case {rc['case_id']}: shares addresses "
+                f"{rc['overlap_addresses']}, filed {rc['filed_date']} "
+                f"[source: case_correlation]\n"
+            )
+
     return f"""
 The investigator submitted: "{question}"
-
 {task_instruction}
-
 Use ONLY the following tool evidence to build your response.
 Do not state any fact not present below.
-
 {evidence_block}
-
+{related_cases_block}
 Format your response as:
 1. **Investigation Summary** — factual findings with inline citations
    e.g. "Risk score: 0.87 [source: get_risk_score → risk_score]"

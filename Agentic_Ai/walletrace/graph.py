@@ -40,6 +40,8 @@ from walletrace.tools.mocks import (
     log_event,
 )
 
+from walletrace.case_store import save_case, find_overlaps #cross-correlation
+
 logger = logging.getLogger(__name__)
 
 # ── LLM initialisation ───────────────────────────────────────────────────────
@@ -332,6 +334,7 @@ def node_respond(state: WalletTraceState) -> WalletTraceState:
         question=state.get("original_message", ""),
         tool_evidence=state.get("tool_evidence", {}),
         routing_decision=state.get("routing_decision", "manual_review"),
+         related_cases=state.get("related_cases", []),
     )
 
     messages = [
@@ -419,6 +422,13 @@ def build_graph() -> StateGraph:
     builder.add_node("RecommendManualReview", node_recommend_manual_review)
     builder.add_node("Log", node_log)
     builder.add_node("Respond", node_respond)
+    
+    #cross-correlation node
+    builder.add_node("Correlate", node_correlate)
+    builder.add_edge("Cluster", "Correlate")
+    builder.add_edge("Correlate", "RiskScore")
+    
+    
 
     # ── Define edges ─────────────────────────────────────────────────────────
     builder.add_edge(START, "Intake")
@@ -432,7 +442,7 @@ def build_graph() -> StateGraph:
 
     # Linear pipeline: Trace → Cluster → RiskScore → Attribute
     builder.add_edge("Trace", "Cluster")
-    builder.add_edge("Cluster", "RiskScore")
+
     builder.add_edge("RiskScore", "Attribute")
 
     # Conditional branch after Attribute
@@ -459,5 +469,14 @@ def build_graph() -> StateGraph:
     return builder.compile(checkpointer=memory)
 
 
+#cross-correlation node
+def node_correlate(state):
+    cluster_addresses = state["cluster_result"]["addresses"]
+    case_id = state["session_id"]
+
+    overlaps = find_overlaps(cluster_addresses, exclude_case_id=case_id)
+    save_case(case_id, cluster_addresses, exchange=None)
+
+    return {"related_cases": overlaps}
 # Module-level singleton (imported by api.py and tests)
 GRAPH = build_graph()

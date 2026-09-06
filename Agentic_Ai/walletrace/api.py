@@ -81,7 +81,7 @@ class QueryResponse(BaseModel):
             "Requires investigator review before submission."
         ),
     )
-
+    related_cases: list[dict] = []
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
 @app.post("/agent/query", response_model=QueryResponse)
@@ -127,6 +127,7 @@ async def agent_query(request: QueryRequest) -> QueryResponse:
         response_text=final_state.get("response_text", ""),
         citations=citations,
         draft_document=draft_document,
+        related_cases=final_state.get("related_cases", [])
     )
 
 
