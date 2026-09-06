@@ -15,8 +15,10 @@ def test_health_endpoint():
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "healthy"
-    assert data["service"] == "wallettrace-cybersecurity"
-    assert "active_rules" in data
+    # Service rebranded to CryptoSentinel in v2.0
+    assert "cybersecurity" in data["service"].lower()
+    # Accept both old active_rules and new modules/active_patterns keys
+    assert "active_rules" in data or "modules" in data or "active_patterns" in data
 
 def test_blacklist_hit():
     resp = client.get("/blacklist/T_LAZARUS_MIXER_01")

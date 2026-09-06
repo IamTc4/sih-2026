@@ -1,53 +1,63 @@
-// src/components/Sidebar.jsx
+// src/components/Sidebar.jsx — CryptoSentinel Dark SOC Sidebar
 import React from 'react'
 
 const NAV = [
-  { id: 'investigation',    label: 'Investigation View',         group: 'TACTICAL OPERATIONS' },
-  { id: 'evidence-intake',  label: 'Evidence Intake (NCRP & OCR)', group: 'TACTICAL OPERATIONS', badge: 'NEW' },
-  { id: 'active-cases',     label: 'Active Cases Registry',      group: 'TACTICAL OPERATIONS', badge: '4' },
-  { id: 'legal-notice',     label: 'Section 91 CrPC Notice',     group: 'LEGAL & ENFORCEMENT' },
-  { id: 'bank-gateway',     label: 'Simulated Bank Gateway',     group: 'LEGAL & ENFORCEMENT' },
-  { id: 'audit-trail',      label: 'Audit Trail Ledger',         group: 'COMPLIANCE & AUDIT' },
-  { id: 'model-info',       label: 'ML Model Transparency Card', group: 'COMPLIANCE & AUDIT' },
+  // ── Tactical Operations
+  { id: 'investigation',   label: 'Investigation',          icon: '🔍', group: 'TACTICAL OPS' },
+  { id: 'multichain',      label: 'Multi-Chain Inspector',  icon: '⛓️', group: 'TACTICAL OPS', badge: 'NEW' },
+  { id: 'batch',           label: 'Fraud Ring Analysis',    icon: '🕸️', group: 'TACTICAL OPS', badge: 'NEW' },
+  { id: 'evidence-intake', label: 'Evidence Intake (NCRP)', icon: '📷', group: 'TACTICAL OPS' },
+  { id: 'upi-bridge',      label: 'UPI → Crypto Bridge',   icon: '🏦', group: 'TACTICAL OPS', badge: 'NEW' },
+  { id: 'active-cases',    label: 'Active Cases',           icon: '📂', group: 'TACTICAL OPS', badge: '4' },
+  // ── Intelligence
+  { id: 'threat-map',      label: 'Threat Intel Feed',      icon: '🛡️', group: 'INTELLIGENCE', badge: 'LIVE' },
+  // ── Legal
+  { id: 'legal-notice',    label: 'Legal Notice (§91 BNSS)',icon: '⚖️', group: 'LEGAL' },
+  { id: 'bank-gateway',    label: 'Exchange Gateway',       icon: '🏛️', group: 'LEGAL' },
+  // ── Compliance
+  { id: 'audit-trail',     label: 'Evidence Chain',         icon: '🔗', group: 'COMPLIANCE' },
+  { id: 'model-info',      label: 'ML Model Card',          icon: '🧠', group: 'COMPLIANCE' },
 ]
 
 export default function Sidebar({ active, onNav }) {
   const groups = [...new Set(NAV.map(n => n.group))]
+
   return (
-    <aside className="fixed left-0 top-20 bottom-0 w-sidebar-compact bg-surface-container-low z-40 flex flex-col justify-between py-space-md overflow-y-auto">
-      <div className="flex flex-col gap-space-base">
+    <aside className="cs-sidebar">
+      <div>
         {groups.map(grp => (
-          <div key={grp} className="px-space-base">
-            <span className="font-label-caps text-label-caps text-outline tracking-wider block mb-space-xs">{grp}</span>
-            <nav className="flex flex-col gap-space-2xs">
-              {NAV.filter(n => n.group === grp).map(n => (
-                <button
-                  key={n.id}
-                  onClick={() => onNav(n.id)}
-                  className={`flex items-center justify-between px-space-sm py-space-sm transition-colors font-body-medium text-body-medium rounded w-full text-left ${
-                    active === n.id
-                      ? 'bg-primary-container text-on-primary-container font-bold'
-                      : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
-                  }`}
-                >
-                  <span>{n.label}</span>
-                  {n.badge && (
-                    <span className="font-code-sm text-code-sm px-space-xs py-space-2xs bg-surface-container-highest text-primary font-bold rounded">
-                      {n.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
+          <div key={grp} className="cs-nav-group">
+            <div className="cs-nav-group-label">{grp}</div>
+            {NAV.filter(n => n.group === grp).map(n => (
+              <button
+                key={n.id}
+                onClick={() => onNav(n.id)}
+                className={`cs-nav-item ${active === n.id ? 'active' : ''}`}
+              >
+                <span style={{ fontSize: '.9rem' }}>{n.icon}</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>{n.label}</span>
+                {n.badge && (
+                  <span className={`cs-nav-badge ${n.badge === 'LIVE' ? 'alert' : ''}`}>
+                    {n.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         ))}
       </div>
 
       {/* Station integrity */}
-      <div className="mx-space-sm px-space-base py-space-sm bg-surface-container-lowest rounded mt-space-base">
-        <div className="font-label-caps text-label-caps text-on-surface-variant">STATION INTEGRITY</div>
-        <div className="font-code-sm text-code-sm text-secondary font-bold">CHAIN-OF-CUSTODY VERIFIED</div>
-        <div className="font-code-sm text-code-sm text-outline mt-space-2xs">KEY ID: 0x882B...DF19</div>
+      <div style={{ margin: '0 .75rem', padding: '.75rem', background: 'var(--bg-input)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '.6rem', color: 'var(--text-muted)', letterSpacing: '.1em', marginBottom: '.3rem' }}>
+          STATION INTEGRITY
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '.7rem', color: 'var(--emerald-400)', fontWeight: '600' }}>
+          ✓ CHAIN VERIFIED
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '.65rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
+          SIH-26183 · v2.0
+        </div>
       </div>
     </aside>
   )

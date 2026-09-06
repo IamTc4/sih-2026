@@ -1,61 +1,83 @@
-// src/components/Header.jsx
-import React from 'react'
+// src/components/Header.jsx — CryptoSentinel Command Center Header
+import React, { useState, useEffect } from 'react'
+import { blockchainHealth, mlHealth, cyberHealth, agentHealth } from '../services/api'
 
-export default function Header({ activeView }) {
-  const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+const SERVICES = [
+  { key: 'blockchain', label: 'BLOCKCHAIN', fn: blockchainHealth },
+  { key: 'ml',         label: 'ML ENGINE',  fn: mlHealth         },
+  { key: 'cyber',      label: 'CYBER INTEL',fn: cyberHealth      },
+  { key: 'agent',      label: 'AGENT',      fn: agentHealth      },
+]
+
+export default function Header({ activeView, userRole, onOpenLogin }) {
+  const [statuses, setStatuses] = useState({})
+  const [time, setTime]         = useState(new Date())
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const results = {}
+      await Promise.all(SERVICES.map(async s => {
+        try { await s.fn(); results[s.key] = 'ok' }
+        catch { results[s.key] = 'err' }
+      }))
+      setStatuses(results)
+    }
+    fetchStatus()
+    const si = setInterval(fetchStatus, 30000)
+    const ti = setInterval(() => setTime(new Date()), 1000)
+    return () => { clearInterval(si); clearInterval(ti) }
+  }, [])
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/95 backdrop-blur-md">
-      {/* Top status bar */}
-      <div className="h-6 px-space-base bg-surface-dim flex items-center justify-between font-label-caps text-label-caps tracking-widest text-on-surface-variant">
-        <div className="flex items-center gap-space-md">
-          <span className="flex items-center gap-space-xs text-secondary">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-            RPC LIVE: TRON-MAINNET
-          </span>
-          <span className="text-outline">|</span>
-          <span>SHA-256 HASH CHAIN: ACTIVE</span>
-          <span className="text-outline">|</span>
-          <span className="text-primary">SIH26183 — WALLETTRACE v1.0</span>
-        </div>
-        <div className="flex items-center gap-space-md font-code-sm text-code-sm">
-          <span className="text-on-surface-variant">MHA I4C CYBER CELL</span>
-          <span className="px-space-xs bg-error-container text-on-error-container font-label-caps text-label-caps rounded">
-            SECURE CONSOLE
-          </span>
-        </div>
+    <header className="cs-header">
+      {/* Logo */}
+      <div className="cs-logo">
+        CRYPTO<span>SENTINEL</span>
       </div>
 
-      {/* Main header */}
-      <div className="h-14 px-space-base flex items-center justify-between">
-        <div className="flex items-center gap-space-md">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-surface font-bold text-sm">W</div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-space-sm">
-              <span className="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">WALLETTRACE</span>
-              <span className="font-code-base text-code-base text-primary font-bold">// CYBER-COMMAND</span>
-            </div>
-            <span className="font-label-caps text-label-caps text-on-surface-variant tracking-wider">
-              MHA CYBER FORENSICS • NATIONAL INTELLIGENCE PORTAL
-            </span>
-          </div>
-          <div className="ml-space-md hidden lg:flex items-center gap-space-sm">
-            <span className="px-space-xs py-space-2xs bg-status-danger-bg text-error font-label-caps text-label-caps rounded">
-              RESTRICTED — LAW ENFORCEMENT ONLY
-            </span>
-            <span className="px-space-xs py-space-2xs bg-status-warning-bg text-status-warning font-label-caps text-label-caps rounded">
-              ACTIVE INCIDENTS: 14 CRITICAL
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-space-md">
-          <div className="text-right hidden sm:block">
-            <div className="font-title-sm text-title-sm text-on-surface">Insp. R. Sharma</div>
-            <div className="font-code-sm text-code-sm text-on-surface-variant">Cyber Cell Zone 4 • NCRP #1930</div>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-surface font-bold text-sm">RS</div>
-        </div>
+      {/* Subtitle */}
+      <div style={{ fontSize: '.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '.08em', marginLeft: '.5rem' }}>
+        MHA I4C · SIH-26183
       </div>
+
+      {/* Service health pills */}
+      <div className="cs-header-status" style={{ gap: '.5rem' }}>
+        {SERVICES.map(s => (
+          <div key={s.key} className="cs-header-pill">
+            <span className={`status-dot ${statuses[s.key] === 'ok' ? 'green' : statuses[s.key] === 'err' ? 'red' : 'amber'}`} />
+            {s.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Clock */}
+      <div style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '.72rem', color: 'var(--text-secondary)' }}>
+        {time.toISOString().replace('T', ' ').substring(0, 19)} UTC
+      </div>
+
+      {/* Role badge */}
+      <button
+        onClick={onOpenLogin}
+        style={{
+          marginLeft: '.75rem',
+          padding: '.3rem .8rem',
+          borderRadius: '20px',
+          border: '1px solid rgba(34,211,238,.3)',
+          background: 'rgba(34,211,238,.08)',
+          color: 'var(--cyan-400)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '.68rem',
+          fontWeight: '600',
+          cursor: 'pointer',
+          letterSpacing: '.05em',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '.4rem',
+        }}
+      >
+        <span>🔐</span>
+        {userRole ? userRole.toUpperCase() : 'SIGN IN'}
+      </button>
     </header>
   )
 }
