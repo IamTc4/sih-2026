@@ -27,7 +27,14 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from walletrace.config import CONFIDENCE_THRESHOLD, GOOGLE_API_KEY, OPENAI_API_KEY, LLM_MODEL, LLM_TEMPERATURE
+from walletrace.config import (
+    CONFIDENCE_THRESHOLD,
+    GOOGLE_API_KEY,
+    OPENAI_API_KEY,
+    GROQ_API_KEY,
+    LLM_MODEL,
+    LLM_TEMPERATURE,
+)
 from walletrace.state import WalletTraceState
 from walletrace.security import SYSTEM_BOUNDARY, sanitize_tool_output, build_grounded_prompt
 from walletrace.tools.mocks import (
@@ -45,7 +52,15 @@ logger = logging.getLogger(__name__)
 # ── LLM initialisation ───────────────────────────────────────────────────────
 def _build_llm():
     """Return a LangChain chat model based on available API keys."""
-    if GOOGLE_API_KEY:
+    if GROQ_API_KEY:
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=LLM_MODEL,
+            temperature=LLM_TEMPERATURE,
+            api_key=GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+        )
+    elif GOOGLE_API_KEY:
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=LLM_MODEL,
@@ -61,7 +76,7 @@ def _build_llm():
         )
     else:
         raise EnvironmentError(
-            "No LLM API key found. Set GOOGLE_API_KEY or OPENAI_API_KEY in .env"
+            "No LLM API key found. Set GROQ_API_KEY, GOOGLE_API_KEY, or OPENAI_API_KEY in .env"
         )
 
 
@@ -82,16 +97,23 @@ def _is_in_scope(message: str) -> bool:
 def _extract_address(message: str) -> str | None:
     """
     Try to extract a wallet address from the investigator's message.
-    Supports Ethereum (0x…) and a generic 25-62 char alphanumeric fallback.
+    Supports TRON (T…), Ethereum (0x…), and Bitcoin (1…/3…/bc1…).
     """
+    # TRC-20 / Tron pattern: starts with T, 34 chars base58
+    tron_pattern = r"\bT[1-9A-HJ-NP-za-km-z]{33}\b"
+    match = re.search(tron_pattern, message)
+    if match:
+        return match.group(0)
+
+    # Ethereum pattern: 0x followed by 40 hex characters
     eth_pattern = r"\b0x[0-9a-fA-F]{40}\b"
     match = re.search(eth_pattern, message)
     if match:
         return match.group(0)
 
-    # Generic fallback: long alphanumeric tokens that look like crypto addresses
-    generic_pattern = r"\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b"  # Bitcoin-ish
-    match = re.search(generic_pattern, message)
+    # Bitcoin pattern: 1, 3, or bc1
+    btc_pattern = r"\b(1|3|bc1)[a-km-zA-HJ-NP-Z1-9]{25,42}\b"
+    match = re.search(btc_pattern, message)
     if match:
         return match.group(0)
 
@@ -326,21 +348,41 @@ def node_respond(state: WalletTraceState) -> WalletTraceState:
     response.  Uses build_grounded_prompt() to enforce citation of every fact.
     Enforces the system-prompt data/instruction boundary via SYSTEM_BOUNDARY.
     """
-    llm = _build_llm()
+    # If Intake short-circuited with an error/out-of-scope response, preserve it
+    if state.get("response_text") and state.get("error"):
+        return state
 
-    grounded_prompt = build_grounded_prompt(
-        question=state.get("original_message", ""),
-        tool_evidence=state.get("tool_evidence", {}),
-        routing_decision=state.get("routing_decision", "manual_review"),
-    )
-
-    messages = [
-        SystemMessage(content=SYSTEM_BOUNDARY),
-        HumanMessage(content=grounded_prompt),
-    ]
-
-    response = llm.invoke(messages)
-    response_text = response.content
+    try:
+        llm = _build_llm()
+        grounded_prompt = build_grounded_prompt(
+            question=state.get("original_message", ""),
+            tool_evidence=state.get("tool_evidence", {}),
+            routing_decision=state.get("routing_decision", "manual_review"),
+        )
+        messages = [
+            SystemMessage(content=SYSTEM_BOUNDARY),
+            HumanMessage(content=grounded_prompt),
+        ]
+        response = llm.invoke(messages)
+        response_text = response.content
+    except Exception as exc:
+        logger.warning("[Respond] LLM invocation failed: %s. Using structured fallback.", exc)
+        risk = state.get("risk_result", {})
+        attr = state.get("attribution_result", {})
+        bl = state.get("blacklist_result", {})
+        cluster = state.get("cluster_result", {})
+        trace = state.get("trace_result", {})
+        
+        response_text = (
+            f"**WalletTrace Automated Investigation Summary**\n\n"
+            f"- **Target Address:** `{state.get('wallet_address', 'N/A')}`\n"
+            f"- **Cluster ID:** `{cluster.get('cluster_id', 'N/A')}` ({len(cluster.get('addresses', []))} addresses)\n"
+            f"- **Trace Depth:** {len(trace.get('graph_edges', []))} transaction edges indexed\n"
+            f"- **Risk Assessment:** Score **{risk.get('risk_score', 0.0):.2f}** ({risk.get('confidence', 'medium')} confidence)\n"
+            f"- **Exchange Attribution:** {attr.get('exchange_name', 'Unattributed')} (Confidence: {attr.get('confidence', 0.0)*100:.0f}%)\n"
+            f"- **Threat Blacklist:** {'MATCH DETECTED' if bl.get('match') else 'No direct blacklist hit'}\n\n"
+            f"**Recommendation:** {'Section 91 BNSS Statutory Freeze Notice Drafted' if state.get('routing_decision') == 'draft_notice' else 'Manual Officer Review Recommended'}"
+        )
 
     # Build structured citations from tool_evidence keys
     citations = [

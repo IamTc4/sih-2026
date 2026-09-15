@@ -12,6 +12,8 @@ from graph.builder import TransactionGraphBuilder
 from clustering.engine import ClusteringEngine
 from tracing.tracer import MultiHopTracer
 from attribution.matcher import ExchangeAttributionMatcher
+from forensics.typology import infer_fraud_typology
+from indexing.sqlite_indexer import get_blockchain_indexer
 
 router = APIRouter()
 
@@ -55,6 +57,13 @@ async def trace_wallet(req: TraceRequest):
     graph_res = await graph_builder.build_graph_for_seed(seed_address, max_hops=max_hops)
     ingested_txs = graph_builder.all_transactions
 
+    # Index transactions into local scalable high-performance index
+    try:
+        indexer = get_blockchain_indexer()
+        indexer.index_transactions([t.model_dump() for t in ingested_txs], chain=settings.TARGET_CHAIN)
+    except Exception as e:
+        pass
+
     # Step 3: Run Clustering Engine
     clusters = clustering_engine.analyze_and_cluster(ingested_txs)
 
@@ -73,6 +82,16 @@ async def trace_wallet(req: TraceRequest):
     if attribution.status != "KNOWN" and all_trace_addrs:
         attribution = attribution_matcher.attribute_cluster_or_addresses(all_trace_addrs)
 
+    # Step 6: Fraud Typology Classification
+    typology = infer_fraud_typology(
+        seed_address=seed_address,
+        clusters=clusters,
+        primary_path=primary_path,
+        graph=graph_res,
+        attribution=attribution,
+        transactions=ingested_txs
+    )
+
     # Construct unified forensic response payload
     return TraceResponse(
         seed_address=seed_address,
@@ -84,12 +103,15 @@ async def trace_wallet(req: TraceRequest):
         clusters=clusters,
         graph=graph_res,
         attribution=attribution,
+        fraud_typology=typology,
         summary={
             "total_nodes": graph_res.total_nodes,
             "total_edges": graph_res.total_edges,
             "clusters_found": len(clusters),
             "paths_traced": len(paths),
-            "attributed_exchange": attribution.exchange_name if attribution.status == "KNOWN" else "UNATTRIBUTED"
+            "attributed_exchange": attribution.exchange_name if attribution.status == "KNOWN" else "UNATTRIBUTED",
+            "fraud_typology": typology.typology_name,
+            "typology_code": typology.typology_code
         }
     )
 
@@ -138,4 +160,74 @@ async def get_address_details(address: str = APIPath(..., description="Wallet ad
         "total_usdt_outflow": round(outflow, 2),
         "transactions": txs
     }
+
+
+# ════════════════════════════════════════════════════════════════
+# CROSS-CHAIN ANALYTICS (SIH26183 Requirement 2.6)
+# ════════════════════════════════════════════════════════════════
+from tracing.cross_chain import (
+    get_cross_chain_engine, CrossChainCorrelationRequest,
+    CrossChainAnalysisResponse, CROSS_CHAIN_BRIDGES
+)
+
+@router.get("/cross-chain/bridges", summary="List Supported Cross-Chain Bridges", tags=["Cross-Chain Analytics"])
+async def list_supported_bridges():
+    """Returns directory of tracked cross-chain bridge protocols (Stargate, BitTorrent, Allbridge, Wormhole, etc.)"""
+    return {
+        "count": len(CROSS_CHAIN_BRIDGES),
+        "bridges": CROSS_CHAIN_BRIDGES
+    }
+
+@router.post("/cross-chain/correlate", response_model=CrossChainAnalysisResponse, summary="Correlate Cross-Chain Transfers", tags=["Cross-Chain Analytics"])
+async def correlate_cross_chain(req: CrossChainCorrelationRequest):
+    """
+    Correlates Tron TRC-20 and Ethereum ERC-20 transactions to prove fund migration across bridge protocols.
+    """
+    engine = get_cross_chain_engine()
+    # Fetch transactions on both chains for seed
+    tron_cli = get_blockchain_client("T_SAMPLE_TRON")
+    eth_cli = get_blockchain_client("0xSAMPLE_ETH")
+    
+    t_txs = [t.model_dump() for t in await tron_cli.get_wallet_transactions(req.source_address)]
+    e_txs = [t.model_dump() for t in await eth_cli.get_wallet_transactions(req.source_address)]
+
+    return engine.correlate_cross_chain_movement(
+        tron_transactions=t_txs,
+        eth_transactions=e_txs,
+        seed_address=req.source_address,
+        tolerance_percent=req.amount_tolerance_percent,
+        max_window_sec=req.max_time_window_seconds
+    )
+
+@router.get("/cross-chain/trace/{address}", response_model=CrossChainAnalysisResponse, summary="Trace Cross-Chain Migration for Wallet", tags=["Cross-Chain Analytics"])
+async def trace_cross_chain_wallet(address: str = APIPath(..., description="Wallet address to check for bridge transfers")):
+    """Identifies whether a wallet's funds have crossed between Tron and Ethereum via bridge contracts."""
+    engine = get_cross_chain_engine()
+    tron_cli = get_blockchain_client("T_SAMPLE_TRON")
+    eth_cli = get_blockchain_client("0xSAMPLE_ETH")
+    
+    t_txs = [t.model_dump() for t in await tron_cli.get_wallet_transactions(address)]
+    e_txs = [t.model_dump() for t in await eth_cli.get_wallet_transactions(address)]
+
+    return engine.correlate_cross_chain_movement(
+        tron_transactions=t_txs,
+        eth_transactions=e_txs,
+        seed_address=address
+    )
+
+
+# ════════════════════════════════════════════════════════════════
+# SCALABLE BLOCKCHAIN INDEXING (SIH26183 Requirement 2.7)
+# ════════════════════════════════════════════════════════════════
+from indexing.sqlite_indexer import get_blockchain_indexer
+
+@router.get("/indexing/stats", summary="Get Blockchain Indexer Performance & Storage Stats", tags=["Blockchain Indexing"])
+async def get_indexing_metrics():
+    """
+    Returns metrics on local high-throughput SQLite WAL index:
+    Indexed transaction count, address count, DB storage size, and sub-millisecond query latency.
+    """
+    indexer = get_blockchain_indexer()
+    return indexer.get_indexing_stats()
+
 

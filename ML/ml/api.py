@@ -28,6 +28,7 @@ from ml.models import (
 )
 from ml.behavioral import get_clusterer
 from ml.features import FEATURE_NAMES
+from ml.typology import classify_fraud_typology
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -92,12 +93,21 @@ async def risk_score(req: RiskScoreRequest) -> RiskScoreResponse:
         req.address[:16], risk_score_val, confidence, model.is_trained,
     )
 
+    # Compute fraud typology classification
+    typology = classify_fraud_typology(
+        req.address,
+        req.blockchain_output,
+        req.cybersecurity_flags,
+        risk_score_val
+    )
+
     return RiskScoreResponse(
         address=req.address,
         risk_score=risk_score_val,
         top_factors=top_factors,
         confidence=confidence,
         behavioral_similarity=behavioral_sim,
+        fraud_typology=typology,
         model_version=MODEL_VERSION,
     )
 

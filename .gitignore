@@ -34,3 +34,6 @@ htmlcov/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Redundant backups
+SIH_26-27/

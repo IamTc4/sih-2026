@@ -72,6 +72,16 @@ class BehavioralSimilarity(BaseModel):
     )
 
 
+class FraudTypology(BaseModel):
+    """Classified cyber fraud typology according to SIH26183 problem statement"""
+    typology_name:           str       = Field(..., description="e.g. 'Task-Based Fraud / Job Scam', 'P2P Crypto Corridor / Mule Ring'")
+    typology_code:           str       = Field(..., description="Standard code e.g. 'TASK_FRAUD', 'INVESTMENT_SCAM', 'P2P_MULE', 'MIXER_LAUNDERING'")
+    confidence:              float     = Field(..., ge=0.0, le=1.0, description="Confidence in typology classification")
+    indicators:              List[str] = Field(default_factory=list, description="Forensic indicators triggered")
+    modus_operandi:          str       = Field(..., description="Summary of scam operation pattern")
+    recommended_legal_action: str      = Field(..., description="Statutory action recommended under BNSS / PMLA")
+
+
 class RiskScoreResponse(BaseModel):
     """Output of POST /risk-score — consumed by Agent's get_risk_score tool and Dashboard."""
     address:               str
@@ -80,6 +90,7 @@ class RiskScoreResponse(BaseModel):
     top_factors:           List[RiskFactor]
     confidence:            str               = Field(..., description="'high' | 'medium' | 'low'")
     behavioral_similarity: Optional[BehavioralSimilarity] = None
+    fraud_typology:        Optional[FraudTypology]        = None
     model_version:         str               = Field("xgboost-v1", description="Trained model identifier")
     disclaimer:            str               = Field(
         "Score produced by an XGBoost model trained on public fraud datasets. "

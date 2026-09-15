@@ -1,6 +1,8 @@
-// src/views/MultiChainView.jsx — Multi-Chain Wallet Inspector
 import React, { useState } from 'react'
-import { traceWallet, getRiskScore, screenAddresses, detectChain, getAttribution } from '../services/api'
+import {
+  traceWallet, getRiskScore, screenAddresses, detectChain,
+  getAttribution, traceCrossChainWallet, getIndexingStats
+} from '../services/api'
 
 const DEMO_WALLETS = [
   { addr: 'T_VICTIM_SIH_DEMO_999', label: 'Tron Demo (Victim)', chain: 'tron' },
@@ -24,11 +26,13 @@ export default function MultiChainView() {
     setResults(null)
 
     try {
-      const [trace, risk, sanctions, attribution] = await Promise.allSettled([
+      const [trace, risk, sanctions, attribution, crossChain, indexing] = await Promise.allSettled([
         traceWallet(a.trim(), 4),
         getRiskScore(a.trim()),
         screenAddresses([a.trim()]),
         getAttribution(a.trim()),
+        traceCrossChainWallet(a.trim()),
+        getIndexingStats(),
       ])
 
       setResults({
@@ -38,6 +42,8 @@ export default function MultiChainView() {
         risk:        risk.status === 'fulfilled'        ? risk.value        : null,
         sanctions:   sanctions.status === 'fulfilled'   ? sanctions.value   : null,
         attribution: attribution.status === 'fulfilled' ? attribution.value : null,
+        crossChain:  crossChain.status === 'fulfilled'  ? crossChain.value  : null,
+        indexing:    indexing.status === 'fulfilled'    ? indexing.value    : null,
         traceError: trace.reason?.message,
       })
     } catch (e) {
@@ -214,6 +220,62 @@ export default function MultiChainView() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cross-Chain Bridge Analytics (Requirement 2.6) */}
+          {results.crossChain && results.crossChain.bridge_detected && (
+            <div className="cs-card mb-4" style={{ borderColor: 'rgba(139, 92, 246, 0.4)', background: 'rgba(139, 92, 246, 0.05)' }}>
+              <div className="cs-card-header">
+                <div className="cs-card-title flex items-center gap-2" style={{ color: '#c4b5fd' }}>
+                  <span>🌉</span> Cross-Chain Bridge Analytics (Req 2.6)
+                </div>
+                <span className="cs-tag" style={{ background: 'rgba(139,92,246,0.2)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.4)' }}>
+                  {results.crossChain.primary_bridge_protocol || 'Cross-Chain Protocol'}
+                </span>
+              </div>
+
+              <div className="p-3 mb-3 rounded" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="text-xs text-secondary mb-2 leading-relaxed">
+                  {results.crossChain.forensic_summary}
+                </div>
+
+                {results.crossChain.hops?.map((hop, idx) => (
+                  <div key={idx} className="mt-2 pt-2 border-t border-white/5" style={{ fontSize: '.75rem', fontFamily: 'var(--font-mono)' }}>
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span style={{ color: '#f87171' }}>TRON (TRC-20): {hop.source_amount} USDT</span>
+                      <span className="text-secondary">➔ {hop.bridge_protocol} ➔</span>
+                      <span style={{ color: '#818cf8' }}>ETHEREUM (ERC-20): {hop.target_amount} USDT</span>
+                    </div>
+                    <div className="text-[11px] text-secondary">
+                      Mechanism: <span className="text-white">{hop.mechanism}</span> · Confidence: <span className="text-emerald-400">{(hop.confidence * 100).toFixed(0)}%</span> · Δt: <span className="text-amber-400">{hop.time_delta_seconds}s</span>
+                    </div>
+                    <div className="text-[10px] text-muted truncate mt-1">
+                      Evidence: {hop.evidence}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scalable Blockchain Indexer Status (Requirement 2.7) */}
+          {results.indexing && (
+            <div className="cs-card mb-4" style={{ borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.03)' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs" style={{ color: '#34d399', fontFamily: 'var(--font-mono)' }}>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  SCALABLE LOCAL BLOCKCHAIN INDEXER (Req 2.7)
+                </div>
+                <span className="text-xs font-mono text-secondary">
+                  Latency: <span className="text-emerald-400 font-bold">{results.indexing.average_lookup_latency_ms}ms</span> · Throughput: <span className="text-emerald-400 font-bold">{results.indexing.indexing_throughput_tx_sec} tx/s</span>
+                </span>
+              </div>
+              <div className="mt-2 flex gap-4 text-xs font-mono text-secondary">
+                <div>Indexed Transactions: <strong className="text-white">{results.indexing.total_indexed_transactions}</strong></div>
+                <div>Address Ledgers: <strong className="text-white">{results.indexing.total_indexed_addresses}</strong></div>
+                <div>Storage Engine: <strong className="text-white">{results.indexing.storage_engine}</strong></div>
               </div>
             </div>
           )}

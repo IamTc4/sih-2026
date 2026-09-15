@@ -92,6 +92,15 @@ class TraceRequest(BaseModel):
     max_hops: Optional[int] = Field(None, description="Optional override for max hop depth (1-10)")
     flow_threshold_percent: Optional[float] = Field(None, description="Optional override for peel-chain threshold")
 
+class TypologySummary(BaseModel):
+    """Classified fraud typology according to SIH26183 problem statement"""
+    typology_name: str = Field(..., description="Scam/Fraud Typology (e.g. P2P Crypto Corridor / Mule Ring, Task Fraud)")
+    typology_code: str = Field(..., description="Short classification code")
+    confidence: float = Field(0.85, ge=0.0, le=1.0)
+    indicators: List[str] = Field(default_factory=list)
+    modus_operandi: str = Field(...)
+    recommended_legal_action: str = Field(...)
+
 class TraceResponse(BaseModel):
     """Unified master JSON response returned by POST /trace for AI/ML/Dashboard consumption"""
     seed_address: str
@@ -103,4 +112,6 @@ class TraceResponse(BaseModel):
     clusters: List[Cluster] = Field(default_factory=list)
     graph: GraphResponse
     attribution: AttributionResult
+    fraud_typology: Optional[TypologySummary] = None
     summary: Dict[str, Any] = Field(default_factory=dict)
+

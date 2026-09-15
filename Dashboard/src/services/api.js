@@ -105,6 +105,44 @@ export const analyzeUPIComplaint = (complaint_text, amount_inr, fir_number, upi_
     body: JSON.stringify({ complaint_text, amount_inr, fir_number, upi_ids }),
   })
 
+// ── NCRP & SAHYOG Gateway (Req 1.2) ──────────────────────────────
+export const listNCRPTickets = () => _fetch(`${CYBER_URL}/intake/ncrp/tickets`)
+export const getNCRPTicket = (id) => _fetch(`${CYBER_URL}/intake/ncrp/ticket/${id}`)
+export const ingestNCRPComplaint = (payload) =>
+  _fetch(`${CYBER_URL}/intake/ncrp/webhook`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+export const syncSahyog = (payload) =>
+  _fetch(`${CYBER_URL}/intake/sahyog/sync`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+// ── Cross-Chain Bridge Analytics (Req 2.6) ────────────────────────
+export const getCrossChainBridges = () => _fetch(`${BLOCKCHAIN_URL}/cross-chain/bridges`)
+export const correlateCrossChain = (source_address, source_chain = 'tron', target_chain = 'ethereum') =>
+  _fetch(`${BLOCKCHAIN_URL}/cross-chain/correlate`, {
+    method: 'POST',
+    body: JSON.stringify({ source_address, source_chain, target_chain }),
+  })
+export const traceCrossChainWallet = (address) => _fetch(`${BLOCKCHAIN_URL}/cross-chain/trace/${address}`)
+
+// ── Scalable Blockchain Indexer (Req 2.7) ─────────────────────────
+export const getIndexingStats = () => _fetch(`${BLOCKCHAIN_URL}/indexing/stats`)
+
+// ── LEA CCTNS & Gov SSO (Req 5.6) ─────────────────────────────────
+export const exportCCTNSDiary = (payload) =>
+  _fetch(`${CYBER_URL}/lea/cctns/export`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+export const authenticateGovSSO = (gov_email, badge_number) =>
+  _fetch(`${CYBER_URL}/auth/gov-sso/authenticate`, {
+    method: 'POST',
+    body: JSON.stringify({ gov_email, badge_number }),
+  })
+
 export const cyberHealth = () => _fetch(`${CYBER_URL}/health`)
 
 // ── Utility: detect chain from address ────────────────────────────────────────

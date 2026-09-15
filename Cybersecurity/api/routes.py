@@ -384,3 +384,92 @@ def _mock_upi_bridge_response(req: UPIBridgeRequest) -> dict:
         ],
         "status": "mock_mode"
     }
+
+
+# ════════════════════════════════════════════════════════════════
+# NCRP & SAHYOG INTEGRATION GATEWAY (SIH26183 Requirement 1.2)
+# ════════════════════════════════════════════════════════════════
+from intake.ncrp_sahyog_gateway import (
+    get_ncrp_sahyog_gateway, NCRPComplaintPayload, NCRPIngestResponse,
+    SahyogSyncRequest, SahyogSyncResponse
+)
+
+@router.post("/intake/ncrp/webhook", response_model=NCRPIngestResponse, summary="NCRP Automated Webhook Ingestion", tags=["NCRP / SAHYOG Gateway"])
+async def ingest_ncrp_webhook(payload: NCRPComplaintPayload, bg: BackgroundTasks):
+    """
+    Direct MHA NCRP / 1930 Portal Integration Endpoint.
+    Ingests live NCRP complaints, generates SHA-256 evidence token, and triages suspect leads.
+    """
+    gateway = get_ncrp_sahyog_gateway()
+    res = gateway.ingest_ncrp_complaint(payload)
+    bg.add_task(
+        evidence_service.log_event,
+        "ncrp_complaint_ingested",
+        {"ticket_id": payload.ticket_id, "evidence_hash": res.evidence_hash, "amount": payload.reported_fraud_amount_inr}
+    )
+    return res
+
+@router.get("/intake/ncrp/ticket/{ticket_id}", summary="Query NCRP Ticket Status", tags=["NCRP / SAHYOG Gateway"])
+async def get_ncrp_ticket(ticket_id: str = APIPath(..., description="NCRP Ticket ID (e.g. NCRP-2026-MH-9812)")):
+    """Queries verified complaint data and current triage state from NCRP gateway."""
+    gateway = get_ncrp_sahyog_gateway()
+    ticket = gateway.get_ncrp_ticket(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"NCRP ticket '{ticket_id}' not found in gateway cache")
+    return ticket
+
+@router.get("/intake/ncrp/tickets", summary="List Active NCRP Complaints", tags=["NCRP / SAHYOG Gateway"])
+async def list_ncrp_tickets():
+    """Lists recent incoming NCRP cyber fraud complaints ready for forensic trace."""
+    gateway = get_ncrp_sahyog_gateway()
+    return gateway.list_recent_tickets()
+
+@router.post("/intake/sahyog/sync", response_model=SahyogSyncResponse, summary="Synchronize Freeze with MHA SAHYOG", tags=["NCRP / SAHYOG Gateway"])
+async def sync_sahyog_clearinghouse(req: SahyogSyncRequest, bg: BackgroundTasks):
+    """
+    Dispatches emergency account/wallet freeze requisition to central MHA SAHYOG clearinghouse.
+    Notifies NPCI and target VASP nodal officers under Section 91 & 102 BNSS.
+    """
+    gateway = get_ncrp_sahyog_gateway()
+    res = gateway.sync_to_sahyog(req)
+    bg.add_task(
+        evidence_service.log_event,
+        "sahyog_freeze_broadcast",
+        {"sahyog_id": res.sahyog_case_id, "target": req.target_wallet_or_vpa, "vasp": req.target_vasp_name}
+    )
+    return res
+
+
+# ════════════════════════════════════════════════════════════════
+# LEA INTEGRATION: CCTNS, ICJS & GOV SSO (SIH26183 Requirement 5.6)
+# ════════════════════════════════════════════════════════════════
+from policy.lea_gateway import (
+    get_lea_gateway, CCTNSCaseDiaryExportRequest,
+    CCTNSExportResponse, GovSSORequest, GovSSOResponse
+)
+
+@router.post("/lea/cctns/export", response_model=CCTNSExportResponse, summary="Export CCTNS Form-II Case Diary (XML & JSON)", tags=["LEA / CCTNS Integration"])
+async def export_cctns_diary(req: CCTNSCaseDiaryExportRequest, bg: BackgroundTasks):
+    """
+    Generates standardized CCTNS Case Diary Part-II (Form II) technical evidence report
+    in NCRB CCTNS XML standard with ICJS SHA-256 tamper-evident digital seal.
+    """
+    gateway = get_lea_gateway()
+    res = gateway.export_cctns_diary(req)
+    bg.add_task(
+        evidence_service.log_event,
+        "cctns_diary_exported",
+        {"dispatch_id": res.cctns_dispatch_id, "fir": req.fir_number, "icjs_seal": res.icjs_sha256_seal}
+    )
+    return res
+
+@router.post("/auth/gov-sso/authenticate", response_model=GovSSOResponse, summary="National Gov SSO Authentication (Parichay / MeriPehchan)", tags=["LEA / CCTNS Integration"])
+async def authenticate_gov_sso(req: GovSSORequest):
+    """
+    Police Intranet OAuth2/OIDC Single Sign-On adapter for verified police officers.
+    Grants RBAC role tokens with automated departmental and security clearance verification.
+    """
+    gateway = get_lea_gateway()
+    return gateway.authenticate_gov_sso(req)
+
+

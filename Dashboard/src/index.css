@@ -1,18 +1,22 @@
-/* CryptoSentinel — Dark SOC Command Center UI v2.0 */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@400;700;900&display=swap');
+
+/* CryptoSentinel — Dark SOC Command Center UI v2.0 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ════════════════════════════════════════════════════════════
    DESIGN TOKENS
 ════════════════════════════════════════════════════════════ */
 :root {
-  /* Background layers */
-  --bg-void:       #020408;
-  --bg-base:       #060c14;
-  --bg-surface:    #0a1628;
-  --bg-elevated:   #0f1e36;
-  --bg-panel:      #132240;
-  --bg-card:       #1a2d4a;
-  --bg-input:      #0d1a2e;
+  /* Background layers — TRUE BLACK cockpit */
+  --bg-void:       #000000;
+  --bg-base:       #03050a;
+  --bg-surface:    #070d1a;
+  --bg-elevated:   #0c1525;
+  --bg-panel:      #101c30;
+  --bg-card:       #131f35;
+  --bg-input:      #060c1a;
 
   /* Primary palette — Electric Cyan */
   --cyan-50:  #ecfeff;
@@ -79,15 +83,16 @@ html { font-size: 14px; scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-sans);
-  background: var(--bg-void);
+  background: #000000;
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  /* Subtle scanline effect */
+  /* BLACK scanline cockpit — pure void with faint cyan grid */
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34,211,238,.08) 0%, transparent 100%),
-    linear-gradient(rgba(34,211,238,.02) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 3px;
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(34,211,238,.05) 0%, transparent 60%),
+    linear-gradient(rgba(34,211,238,.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,238,.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 48px, 48px 100%;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -97,6 +102,20 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-base); }
 ::-webkit-scrollbar-thumb { background: var(--bg-panel); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-medium); }
+
+/* ════════════════════════════════════════════════════════════
+   UTILITY KEYFRAMES
+════════════════════════════════════════════════════════════ */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 
 /* ════════════════════════════════════════════════════════════
    LAYOUT

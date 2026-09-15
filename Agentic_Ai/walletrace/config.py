@@ -19,7 +19,8 @@ CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.75"))
 # ── LLM provider / model ───────────────────────────────────────────────────
 GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
 OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
-LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-1.5-pro")
+GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
+LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen/qwen3.8-27b")
 LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 
 # ── Security ───────────────────────────────────────────────────────────────

@@ -7,9 +7,10 @@ const TOTAL_SECS = 8 * 60 + 42
 const CIRC = 2 * Math.PI * 42
 
 export default function BankGatewayView() {
-  const [secs, setSecs]         = useState(TOTAL_SECS)
-  const [showModal, setModal]   = useState(false)
-  const intervalRef             = useRef(null)
+  const [secs, setSecs]               = useState(TOTAL_SECS)
+  const [showModal, setModal]         = useState(false)
+  const [syncPercent, setSyncPercent] = useState(0)
+  const intervalRef                   = useRef(null)
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
@@ -18,10 +19,28 @@ export default function BankGatewayView() {
     return () => clearInterval(intervalRef.current)
   }, [])
 
+  // Sync count-up animation on load (0 to 100% over 800ms)
+  useEffect(() => {
+    let startTimestamp = null
+    const duration = 800
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setSyncPercent(Math.round(eased * 100))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [])
+
   const mm = String(Math.floor(secs / 60)).padStart(2, '0')
   const ss = String(secs % 60).padStart(2, '0')
   const progress = secs / TOTAL_SECS
   const dashOffset = CIRC * (1 - progress)
+
+  const isReverted = secs <= 0
+  const isUrgent   = secs <= 60 && !isReverted
+  const timerRingColor = isReverted ? '#10b981' : isUrgent ? '#ea580c' : '#93000a'
 
   return (
     <div className="w-full bg-consumer-surface rounded-xl shadow-xl overflow-hidden text-consumer-text-primary">
@@ -72,23 +91,43 @@ export default function BankGatewayView() {
         </div>
       </header>
 
-      {/* Intercept ribbon */}
-      <div className="bg-error-container text-on-error-container px-space-xl py-space-md flex items-start sm:items-center justify-between gap-space-base shadow-inner">
+      {/* Intercept ribbon with slide-down animation */}
+      <div className={`px-space-xl py-space-md flex items-start sm:items-center justify-between gap-space-base shadow-inner animate-slide-down transition-colors duration-500 ${
+        isReverted
+          ? 'bg-status-success-bg text-secondary border-b border-secondary/30'
+          : 'bg-error-container text-on-error-container'
+      }`}>
         <div className="flex items-start sm:items-center gap-space-md">
-          <div className="w-10 h-10 rounded-full bg-on-error-container/20 flex items-center justify-center shrink-0 text-xl">⚖️</div>
+          <div className="w-10 h-10 rounded-full bg-on-error-container/20 flex items-center justify-center shrink-0 text-xl">
+            {isReverted ? '✅' : '⚖️'}
+          </div>
           <div>
             <div className="flex flex-wrap items-center gap-space-xs">
-              <span className="font-title-sm text-title-sm font-bold tracking-tight">TRANSACTION SUSPENDED — SUSPECTED FRAUD RING INTERCEPT</span>
-              <span className="px-space-xs py-space-2xs rounded bg-on-error-container text-error-container font-label-caps text-label-caps uppercase">NCRP Section 91 Trigger</span>
+              <span className="font-title-sm text-title-sm font-bold tracking-tight">
+                {isReverted
+                  ? 'TRANSACTION RESOLVED — REGULATORY HOLD EXPIRED & FUNDS RESTORED'
+                  : 'TRANSACTION SUSPENDED — SUSPECTED FRAUD RING INTERCEPT'}
+              </span>
+              <span className={`px-space-xs py-space-2xs rounded font-label-caps text-label-caps uppercase ${
+                isReverted
+                  ? 'bg-secondary text-surface'
+                  : 'bg-on-error-container text-error-container'
+              }`}>
+                {isReverted ? 'Sec. 91 Auto-Reversion' : 'NCRP Section 91 Trigger'}
+              </span>
             </div>
             <p className="font-body-sm text-body-sm opacity-90 mt-space-2xs">
-              National Cybercrime Reporting Portal (MHA-I4C) flag detected on outbound destination settlement route. Escrow safety protocols engaged.
+              {isReverted
+                ? 'Statutory escrow timer concluded. Funds of ₹12,18,450.00 have been safely returned to your primary account without deduction.'
+                : 'National Cybercrime Reporting Portal (MHA-I4C) flag detected on outbound destination settlement route. Escrow safety protocols engaged.'}
             </p>
           </div>
         </div>
         <div className="hidden lg:flex flex-col text-right shrink-0">
           <span className="font-label-caps text-label-caps uppercase tracking-wider opacity-80">Telemetry Feed</span>
-          <span className="font-code-base text-code-base font-bold">I4C-INTERLOCK-LIVE</span>
+          <span className="font-code-base text-code-base font-bold">
+            {isReverted ? 'HOLD-AUTO-RESOLVED' : 'I4C-INTERLOCK-LIVE'}
+          </span>
         </div>
       </div>
 
@@ -100,41 +139,60 @@ export default function BankGatewayView() {
 
           {/* Countdown card */}
           <div className="bg-consumer-surface rounded-xl p-space-xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-lg relative overflow-hidden">
-            <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-status-danger-bg pointer-events-none" />
+            <div className={`absolute -right-12 -top-12 w-48 h-48 rounded-full pointer-events-none transition-colors duration-500 ${
+              isReverted ? 'bg-status-success-bg/40' : 'bg-status-danger-bg'
+            }`} />
             <div className="flex items-center gap-space-lg z-10">
-              {/* SVG countdown ring */}
+              {/* SVG countdown ring with color shift */}
               <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
                 <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="42" fill="none" stroke="#E2E8F0" strokeWidth="8" />
                   <circle
                     cx="50" cy="50" r="42" fill="none"
-                    stroke="#93000a" strokeWidth="8"
+                    stroke={timerRingColor} strokeWidth="8"
                     strokeDasharray={`${CIRC.toFixed(2)}`}
                     strokeDashoffset={dashOffset.toFixed(2)}
                     strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 1s linear' }}
+                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-display-lg text-headline-lg font-bold text-consumer-text-primary tracking-tight">{mm}:{ss}</span>
-                  <span className="font-label-caps text-label-caps text-consumer-text-secondary">REMAINING</span>
+                  <span className={`font-display-lg text-headline-lg font-bold tracking-tight transition-colors duration-300 ${
+                    isReverted ? 'text-secondary' : isUrgent ? 'text-status-warning' : 'text-consumer-text-primary'
+                  }`}>{mm}:{ss}</span>
+                  <span className="font-label-caps text-label-caps text-consumer-text-secondary">
+                    {isReverted ? 'RESTORED' : 'REMAINING'}
+                  </span>
                 </div>
               </div>
               <div className="space-y-space-xs">
-                <div className="inline-flex items-center gap-space-xs px-space-xs py-space-2xs rounded bg-status-danger-bg text-error-container font-label-caps text-label-caps uppercase">
-                  <span className="w-2 h-2 rounded-full bg-error-container animate-pulse" />
-                  Temporary Regulatory Hold in Effect
+                <div className={`inline-flex items-center gap-space-xs px-space-xs py-space-2xs rounded font-label-caps text-label-caps uppercase transition-colors ${
+                  isReverted
+                    ? 'bg-status-success-bg text-secondary'
+                    : 'bg-status-danger-bg text-error-container'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${isReverted ? 'bg-secondary' : 'bg-error-container animate-pulse'}`} />
+                  {isReverted ? 'Escrow Window Resolved' : 'Temporary Regulatory Hold in Effect'}
                 </div>
-                <h2 className="font-headline-md text-headline-md font-bold text-consumer-text-primary tracking-tight">Auto-Reversion Escrow Window</h2>
+                <h2 className="font-headline-md text-headline-md font-bold text-consumer-text-primary tracking-tight">
+                  {isReverted ? 'Funds Restored to Account **4821' : 'Auto-Reversion Escrow Window'}
+                </h2>
                 <p className="font-body-base text-body-base text-consumer-text-secondary max-w-lg">
-                  If unverified within the remaining timeframe, funds will be automatically recalled and restored to account <strong className="text-consumer-text-primary">**4821</strong> without penalty.
+                  {isReverted
+                    ? 'The 8-minute regulatory clearance interval completed. The outbound transfer was safely reversed into your checking account.'
+                    : 'If unverified within the remaining timeframe, funds will be automatically recalled and restored to account **4821 without penalty.'}
                 </p>
               </div>
             </div>
             <div className="flex md:flex-col items-end justify-center shrink-0 z-10 text-right">
               <span className="font-label-caps text-label-caps text-consumer-text-secondary uppercase">Hold Reference ID</span>
               <span className="font-code-base text-code-base font-bold text-consumer-text-primary">TXN-HOLD-9812-NCRP</span>
-              <span className="font-body-sm text-body-sm text-status-warning font-semibold mt-space-2xs">Escrow State: LOCKED</span>
+              <span className={`font-body-sm text-body-sm font-semibold mt-space-2xs flex items-center gap-1 ${
+                isReverted ? 'text-secondary' : 'text-status-warning'
+              }`}>
+                <span className="inline-block animate-lock-shake">🔒</span>
+                <span>{isReverted ? 'Escrow State: RESTORED' : 'Escrow State: LOCKED'}</span>
+              </span>
             </div>
           </div>
 
@@ -275,7 +333,9 @@ export default function BankGatewayView() {
                 <span className="w-2.5 h-2.5 rounded-full bg-primary animate-ping" />
                 <span className="font-title-sm text-title-sm font-bold tracking-tight text-primary">WalletTrace ™ Interlock</span>
               </div>
-              <span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-secondary font-label-caps text-label-caps">SYNC: 100%</span>
+              <span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-secondary font-label-caps text-label-caps tabular-nums">
+                SYNC: {syncPercent}%
+              </span>
             </div>
             <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-base">
               Cryptographic handshake active between Bank Core Banking Switch and Central Law Enforcement Case Management System.
@@ -303,12 +363,18 @@ export default function BankGatewayView() {
             </div>
           </div>
 
-          {/* Officer advisory */}
-          <div className="bg-consumer-surface rounded-xl p-space-lg shadow-sm">
+          {/* Officer advisory note — live incoming dispatch slide-in */}
+          <div
+            className="bg-consumer-surface rounded-xl p-space-lg shadow-sm animate-slide-in-right"
+            style={{ animationDelay: '300ms' }}
+          >
             <div className="flex items-center gap-space-sm mb-space-sm">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-surface font-bold">RS</div>
               <div>
-                <h4 className="font-title-sm text-title-sm font-bold text-consumer-text-primary">Officer Advisory Note</h4>
+                <h4 className="font-title-sm text-title-sm font-bold text-consumer-text-primary flex items-center gap-2">
+                  <span>Officer Advisory Note</span>
+                  <span className="px-1.5 py-0.5 rounded bg-status-danger-bg text-error-container font-label-caps text-[9px] uppercase tracking-wider">LIVE DISPATCH</span>
+                </h4>
                 <p className="font-body-sm text-body-sm text-consumer-text-secondary">Direct Dispatch • Cyber Cell New Delhi</p>
               </div>
             </div>

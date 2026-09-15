@@ -1,8 +1,8 @@
 // src/App.jsx — CryptoSentinel Command Center Root
 import React, { useState } from 'react'
-import Header           from './components/Header'
-import Sidebar          from './components/Sidebar'
-import LoginModal       from './components/LoginModal'
+import Header               from './components/Header'
+import Sidebar              from './components/Sidebar'
+import LoginModal           from './components/LoginModal'
 import InvestigationView    from './views/InvestigationView'
 import BankGatewayView      from './views/BankGatewayView'
 import AuditTrailView       from './views/AuditTrailView'
@@ -14,26 +14,37 @@ import MultiChainView       from './views/MultiChainView'
 import ThreatMapView        from './views/ThreatMapView'
 import UPIBridgeView        from './views/UPIBridgeView'
 import BatchInvestigationView from './views/BatchInvestigationView'
+import SystemIntelView      from './views/SystemIntelView'
 
 const VIEW_LABELS = {
-  'investigation':  'Wallet Investigation',
-  'multichain':     'Multi-Chain Inspector',
-  'batch':          'Fraud Ring Analysis',
-  'evidence-intake':'Evidence Intake (NCRP & OCR)',
-  'active-cases':   'Active Cases Registry',
-  'upi-bridge':     'UPI → Crypto Bridge',
-  'threat-map':     'Live Threat Intel Feed',
-  'legal-notice':   'Section 91 BNSS Legal Notice',
-  'bank-gateway':   'Exchange Gateway',
-  'audit-trail':    'Evidence Chain (Hash-Verified)',
-  'model-info':     'ML Model Transparency Card',
+  'upi-bridge':     'Stage 1: UPI → Crypto Investigation Bridge',
+  'evidence-intake':'Stage 1: Evidence Intake (FIR OCR & Logs)',
+  'active-cases':   'Stage 1: Active Cases Registry',
+  'investigation':  'Stage 2: On-Chain Graph & AI Trace',
+  'multichain':     'Stage 2: Multi-Chain Inspector',
+  'batch':          'Stage 2: Mule Ring Clustering',
+  'threat-map':     'Stage 3: Live Threat Intelligence Feed',
+  'bank-gateway':   'Stage 3: Bank Gateway (NCRP 1930 Hold Intercept)',
+  'legal-notice':   'Stage 4: Section 91 BNSS Statutory Requisition',
+  'audit-trail':    'Stage 4: Evidence Hash Chain (Sec 65B BSA)',
+  'model-info':     'Stage 4: ML Model Transparency Card',
+  'system-intel':   'System Intelligence — Cyber Standards · ML Model · AI Agent',
 }
 
+const PIPELINE_STEPS = [
+  { id: 'intake',      label: '1. FIR / UPI Intake',       targetView: 'upi-bridge',   views: ['upi-bridge', 'evidence-intake', 'active-cases'] },
+  { id: 'forensics',   label: '2. On-Chain Graph Trace',   targetView: 'investigation',views: ['investigation', 'multichain', 'batch'] },
+  { id: 'prevention',  label: '3. Bank Intercept & Threat',targetView: 'bank-gateway', views: ['bank-gateway', 'threat-map'] },
+  { id: 'enforcement', label: '4. Section 91 BNSS Freeze', targetView: 'legal-notice', views: ['legal-notice'] },
+  { id: 'evidence',    label: '5. Court Hash Chain',       targetView: 'audit-trail',  views: ['audit-trail', 'model-info'] },
+]
+
 export default function App() {
-  const [view, setView]           = useState('investigation')
+  const [view, setView]           = useState('upi-bridge')
   const [selectedWallet, setSelectedWallet] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
   const [user, setUser]           = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const handleLaunchInvestigation = (wallet) => {
     setSelectedWallet(wallet)
@@ -42,75 +53,195 @@ export default function App() {
 
   const handleLogin = (userData) => {
     setUser(userData)
+    setShowLogin(false)
   }
 
   const renderView = () => {
     switch (view) {
       case 'investigation':
-        return <InvestigationView initialWallet={selectedWallet} userRole={user?.role} />
+        return <InvestigationView initialWallet={selectedWallet} userRole={user?.role} onNav={setView} />
       case 'multichain':
-        return <MultiChainView />
+        return <MultiChainView onNav={setView} />
       case 'batch':
-        return <BatchInvestigationView />
+        return <BatchInvestigationView onNav={setView} />
       case 'evidence-intake':
-        return <div className="cs-view"><EvidenceIntakeView onLaunchInvestigation={handleLaunchInvestigation} /></div>
+        return <EvidenceIntakeView onLaunchInvestigation={handleLaunchInvestigation} onNav={setView} />
       case 'active-cases':
-        return <div className="cs-view"><ActiveCasesView onSelectCase={handleLaunchInvestigation} /></div>
+        return <ActiveCasesView onSelectCase={handleLaunchInvestigation} onNav={setView} />
       case 'upi-bridge':
-        return <div className="cs-view"><UPIBridgeView /></div>
+        return <UPIBridgeView onLaunchInvestigation={handleLaunchInvestigation} onNav={setView} />
       case 'threat-map':
-        return <ThreatMapView />
+        return <ThreatMapView onNav={setView} />
       case 'legal-notice':
-        return <div className="cs-view"><LegalNoticeView initialWallet={selectedWallet || 'T_VICTIM_SIH_DEMO_999'} /></div>
+        return <LegalNoticeView initialWallet={selectedWallet || 'T_VICTIM_SIH_DEMO_999'} onNav={setView} />
       case 'bank-gateway':
-        return <div className="cs-view" style={{ padding: '1.5rem' }}><BankGatewayView /></div>
+        return <BankGatewayView onNav={setView} />
       case 'audit-trail':
-        return <div className="cs-view"><AuditTrailView /></div>
+        return <AuditTrailView onNav={setView} />
       case 'model-info':
-        return <div className="cs-view"><ModelInfoView /></div>
+        return <ModelInfoView onNav={setView} />
+      case 'system-intel':
+        return <SystemIntelView onNav={setView} />
       default:
-        return <InvestigationView />
+        return <UPIBridgeView onLaunchInvestigation={handleLaunchInvestigation} onNav={setView} />
     }
   }
 
+  const SIDEBAR_W = sidebarOpen ? 260 : 0
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg-void)', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg-void)', color: 'var(--text-primary)' }}>
       <Header
         activeView={view}
         userRole={user?.role}
         onOpenLogin={() => setShowLogin(true)}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(s => !s)}
       />
-      <Sidebar active={view} onNav={setView} />
+
+      <Sidebar active={view} onNav={(v) => { setView(v) }} open={sidebarOpen} />
 
       {/* Main content */}
-      <div style={{ marginLeft: 'var(--sidebar-w)', paddingTop: 'var(--header-h)', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Breadcrumb */}
+      <div style={{
+        marginLeft: sidebarOpen ? 'var(--sidebar-w)' : '0',
+        paddingTop: 'var(--header-h)',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        transition: 'margin-left 0.3s ease',
+      }}>
+        {/* Breadcrumb & Quick Info */}
         <div style={{
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
-          gap: '.5rem',
-          padding: '.4rem 1.5rem',
-          borderBottom: '1px solid var(--border-subtle)',
-          background: 'rgba(6,12,20,.9)',
+          justifyContent: 'space-between',
+          padding: '.4rem 1.25rem',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(2,4,8,.95)',
           fontFamily: 'var(--font-mono)',
           fontSize: '.68rem',
           color: 'var(--text-muted)',
           backdropFilter: 'blur(8px)',
         }}>
-          <span style={{ color: 'var(--text-muted)' }}>CRYPTOSENTINEL</span>
-          <span style={{ opacity: .4 }}>›</span>
-          <span style={{ color: 'var(--cyan-400)', fontWeight: '600', letterSpacing: '.05em' }}>
-            {VIEW_LABELS[view]?.toUpperCase()}
-          </span>
-          {user && (
-            <>
-              <span style={{ marginLeft: 'auto' }} />
-              <span className="cs-tag cs-tag-cyan" style={{ marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+            <span style={{ color: 'var(--text-muted)', letterSpacing: '.08em' }}>CRYPTOSENTINEL</span>
+            <span style={{ opacity: .4, margin: '0 .2rem' }}>›</span>
+            <span style={{ color: 'var(--cyan-400)', fontWeight: '600', letterSpacing: '.05em' }}>
+              {VIEW_LABELS[view]?.toUpperCase()}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+            {selectedWallet && (
+              <span style={{
+                padding: '.15rem .5rem',
+                borderRadius: '4px',
+                background: 'rgba(34,211,238,0.1)',
+                border: '1px solid rgba(34,211,238,0.25)',
+                color: '#22d3ee',
+                fontSize: '.62rem',
+              }}>
+                Target: {selectedWallet.slice(0, 8)}…{selectedWallet.slice(-6)}
+              </span>
+            )}
+            {user && (
+              <span style={{
+                padding: '.2rem .6rem',
+                borderRadius: '20px',
+                border: '1px solid rgba(34,211,238,.25)',
+                background: 'rgba(34,211,238,.08)',
+                color: 'var(--cyan-400)',
+                fontSize: '.65rem',
+              }}>
                 🔐 {user.label} · {user.clearance}
               </span>
-            </>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* ── Investigation Lifecycle Stepper Bar ── */}
+        <div style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '.45rem 1.25rem',
+          background: 'rgba(10,14,24,0.92)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          gap: '.5rem',
+          overflowX: 'auto',
+        }}>
+          <span style={{
+            fontSize: '.62rem',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 700,
+            color: 'rgba(255,255,255,0.35)',
+            letterSpacing: '.08em',
+            marginRight: '.25rem',
+            whiteSpace: 'nowrap',
+          }}>
+            CASE WORKFLOW:
+          </span>
+          {PIPELINE_STEPS.map((step, idx) => {
+            const isCurrent = step.views.includes(view)
+            return (
+              <React.Fragment key={step.id}>
+                <button
+                  onClick={() => setView(step.targetView)}
+                  title={`Navigate to ${step.label}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '.4rem',
+                    padding: '.28rem .65rem',
+                    borderRadius: '6px',
+                    border: isCurrent ? '1px solid var(--cyan-400, #22d3ee)' : '1px solid rgba(255,255,255,0.08)',
+                    background: isCurrent ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.02)',
+                    color: isCurrent ? '#22d3ee' : 'rgba(255,255,255,0.6)',
+                    fontSize: '.72rem',
+                    fontFamily: 'var(--font-sans)',
+                    fontWeight: isCurrent ? 700 : 400,
+                    cursor: 'pointer',
+                    transition: 'all .15s ease',
+                    whiteSpace: 'nowrap',
+                    boxShadow: isCurrent ? '0 0 10px rgba(34,211,238,0.15)' : 'none',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isCurrent) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                      e.currentTarget.style.color = '#fff'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isCurrent) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.6)'
+                    }
+                  }}
+                >
+                  <span style={{
+                    width: '15px',
+                    height: '15px',
+                    borderRadius: '50%',
+                    background: isCurrent ? '#22d3ee' : 'rgba(255,255,255,0.12)',
+                    color: isCurrent ? '#000' : 'rgba(255,255,255,0.7)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '.58rem',
+                    fontWeight: 800,
+                  }}>
+                    {idx + 1}
+                  </span>
+                  <span>{step.label}</span>
+                </button>
+                {idx < PIPELINE_STEPS.length - 1 && (
+                  <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: '.68rem', userSelect: 'none' }}>→</span>
+                )}
+              </React.Fragment>
+            )
+          })}
         </div>
 
         {/* View */}
@@ -119,7 +250,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Login Modal */}
       {showLogin && (
         <LoginModal
           onLogin={handleLogin}

@@ -46,22 +46,26 @@ class EthereumClient:
     async def get_wallet_transactions(self, wallet_address: str, limit: int = 50) -> List[Transaction]:
         """
         Fetches USDT-ERC20 transactions for a given wallet address.
-        Supports both Mock mode and Live Etherscan API ingestion.
+        Intelligently routes between Mock dataset (for demo cases) and Live Etherscan API.
         """
+        wallet_clean = wallet_address.strip()
         if self.use_mock:
-            return self._get_mock_transactions_for_wallet(wallet_address)
+            mock_txs = self._get_mock_transactions_for_wallet(wallet_clean)
+            if mock_txs:
+                return mock_txs
+            logger.info(f"Ethereum address {wallet_clean} not found in mock dataset; dynamically querying live Etherscan API...")
 
         # Attempt live API ingestion
         try:
-            live_txs = await self._fetch_live_etherscan(wallet_address, limit)
+            live_txs = await self._fetch_live_etherscan(wallet_clean, limit)
             if live_txs:
                 return live_txs
             
-            logger.warning(f"Etherscan returned no data for {wallet_address}. Falling back to mock dataset.")
-            return self._get_mock_transactions_for_wallet(wallet_address)
+            logger.warning(f"Etherscan returned no data for {wallet_clean}. Falling back to mock dataset.")
+            return self._get_mock_transactions_for_wallet(wallet_clean)
         except Exception as e:
-            logger.error(f"Etherscan API error for {wallet_address}: {e}. Falling back to mock data.")
-            return self._get_mock_transactions_for_wallet(wallet_address)
+            logger.error(f"Etherscan API error for {wallet_clean}: {e}. Falling back to mock data.")
+            return self._get_mock_transactions_for_wallet(wallet_clean)
 
     def _get_mock_transactions_for_wallet(self, wallet_address: str) -> List[Transaction]:
         """Filters mock dataset for transactions involving wallet_address as sender or receiver"""

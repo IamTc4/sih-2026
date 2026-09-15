@@ -118,5 +118,125 @@
     "timestamp": "2026-09-02T13:30:00Z",
     "chain": "tron",
     "block_number": 51200900
+  },
+  {
+    "tx_hash": "tx_otp_hop1_victim_to_mule",
+    "from_address": "T_VICTIM_SIH_DEMO_OTP",
+    "to_address": "T_OTP_MULE_101",
+    "amount": 8500.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T14:00:00Z",
+    "chain": "tron",
+    "block_number": 51201000
+  },
+  {
+    "tx_hash": "tx_otp_peel_split",
+    "from_address": "T_VICTIM_SIH_DEMO_OTP",
+    "to_address": "T_OTP_FEE_PEEL_102",
+    "amount": 150.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T14:02:00Z",
+    "chain": "tron",
+    "block_number": 51201010
+  },
+  {
+    "tx_hash": "tx_otp_hop2_mule_to_consolidator",
+    "from_address": "T_OTP_MULE_101",
+    "to_address": "T_OTP_INTERMEDIARY_201",
+    "amount": 8350.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T14:20:00Z",
+    "chain": "tron",
+    "block_number": 51201150
+  },
+  {
+    "tx_hash": "tx_otp_hop3_consolidator_to_okx",
+    "from_address": "T_OTP_INTERMEDIARY_201",
+    "to_address": "TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7",
+    "amount": 8300.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T14:45:00Z",
+    "chain": "tron",
+    "block_number": 51201300
+  },
+  {
+    "tx_hash": "tx_trading_hop1_victim_to_pool",
+    "from_address": "T_VICTIM_SIH_DEMO_TRADING",
+    "to_address": "T_TRADING_DEPOSIT_101",
+    "amount": 77000.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T15:00:00Z",
+    "chain": "tron",
+    "block_number": 51202000
+  },
+  {
+    "tx_hash": "tx_trading_hop2_split_alpha",
+    "from_address": "T_TRADING_DEPOSIT_101",
+    "to_address": "T_TRADING_LAYER_201",
+    "amount": 55000.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T15:15:00Z",
+    "chain": "tron",
+    "block_number": 51202150
+  },
+  {
+    "tx_hash": "tx_trading_hop2_split_beta",
+    "from_address": "T_TRADING_DEPOSIT_101",
+    "to_address": "T_TRADING_LAYER_202",
+    "amount": 22000.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T15:16:00Z",
+    "chain": "tron",
+    "block_number": 51202160
+  },
+  {
+    "tx_hash": "tx_trading_hop3_merge_alpha",
+    "from_address": "T_TRADING_LAYER_201",
+    "to_address": "T_TRADING_AGGREGATOR_301",
+    "amount": 54500.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T15:35:00Z",
+    "chain": "tron",
+    "block_number": 51202300
+  },
+  {
+    "tx_hash": "tx_trading_hop3_merge_beta",
+    "from_address": "T_TRADING_LAYER_202",
+    "to_address": "T_TRADING_AGGREGATOR_301",
+    "amount": 21800.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T15:36:00Z",
+    "chain": "tron",
+    "block_number": 51202310
+  },
+  {
+    "tx_hash": "tx_trading_hop4_terminal_to_htx",
+    "from_address": "T_TRADING_AGGREGATOR_301",
+    "to_address": "TXLAQ6SoYYCCa8MgAkRdMGFFZsCzE26AoE",
+    "amount": 76000.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T16:00:00Z",
+    "chain": "tron",
+    "block_number": 51202500
+  },
+  {
+    "tx_hash": "tx_known_fraud_hop1_to_ring",
+    "from_address": "TXkrKLFaLKPNzp3sPV4i7HGFt9M1kxB2q",
+    "to_address": "T_MULE_RING_401",
+    "amount": 45000.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T17:00:00Z",
+    "chain": "tron",
+    "block_number": 51203000
+  },
+  {
+    "tx_hash": "tx_known_fraud_hop2_to_coindcx",
+    "from_address": "T_MULE_RING_401",
+    "to_address": "TCoinDCXHotWalletDeposit111111111",
+    "amount": 44200.0,
+    "token": "USDT",
+    "timestamp": "2026-09-02T17:30:00Z",
+    "chain": "tron",
+    "block_number": 51203150
   }
 ]

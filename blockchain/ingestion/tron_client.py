@@ -27,10 +27,7 @@ class TronClient:
         self._mock_cache: Optional[List[Transaction]] = None
 
     def _load_mock_transactions(self) -> List[Transaction]:
-        """Loads and caches pre-populated mock dataset"""
-        if self._mock_cache is not None:
-            return self._mock_cache
-        
+        """Loads fresh pre-populated mock dataset"""
         if not self.mock_data_path.exists():
             logger.warning(f"Mock transaction file not found at {self.mock_data_path}. Returning empty list.")
             return []
@@ -39,7 +36,6 @@ class TronClient:
             with open(self.mock_data_path, "r", encoding="utf-8") as f:
                 raw_list = json.load(f)
             txs = [TransactionNormalizer.from_dict(item) for item in raw_list]
-            self._mock_cache = txs
             return txs
         except Exception as e:
             logger.error(f"Error loading mock dataset: {e}")
@@ -48,26 +44,33 @@ class TronClient:
     async def get_wallet_transactions(self, wallet_address: str, limit: int = 50) -> List[Transaction]:
         """
         Fetches USDT-TRC20 transactions for a given wallet address.
-        Supports both Mock mode and Live Tron API ingestion with rate limit handling.
+        Intelligently routes between Mock dataset (for demo cases) and Live Tron APIs
+        (TronGrid / Tronscan) for arbitrary real-world addresses.
         """
-        if self.use_mock:
-            return self._get_mock_transactions_for_wallet(wallet_address)
+        wallet_clean = wallet_address.strip()
 
-        # Attempt live API ingestion
+        # If mock mode is active, check if address is pre-configured in mock dataset
+        if self.use_mock:
+            mock_txs = self._get_mock_transactions_for_wallet(wallet_clean)
+            if mock_txs:
+                return mock_txs
+            logger.info(f"Address {wallet_clean} not found in mock dataset; dynamically querying live Tron APIs...")
+
+        # Attempt live API ingestion (TronGrid -> Tronscan fallback)
         try:
-            live_txs = await self._fetch_live_trongrid(wallet_address, limit)
+            live_txs = await self._fetch_live_trongrid(wallet_clean, limit)
             if not live_txs:
-                logger.info(f"TronGrid returned 0 txs for {wallet_address}, trying Tronscan fallback...")
-                live_txs = await self._fetch_live_tronscan(wallet_address, limit)
+                logger.info(f"TronGrid returned 0 txs for {wallet_clean}, trying Tronscan fallback...")
+                live_txs = await self._fetch_live_tronscan(wallet_clean, limit)
             
             if live_txs:
                 return live_txs
             
-            logger.warning(f"Live APIs returned no data for {wallet_address}. Falling back to mock dataset.")
-            return self._get_mock_transactions_for_wallet(wallet_address)
+            # Final fallback to mock if live API returned nothing
+            return self._get_mock_transactions_for_wallet(wallet_clean)
         except Exception as e:
-            logger.error(f"Live API error for {wallet_address}: {e}. Falling back to mock data.")
-            return self._get_mock_transactions_for_wallet(wallet_address)
+            logger.error(f"Live API error for {wallet_clean}: {e}. Falling back to mock data.")
+            return self._get_mock_transactions_for_wallet(wallet_clean)
 
     def _get_mock_transactions_for_wallet(self, wallet_address: str) -> List[Transaction]:
         """Filters mock dataset for transactions involving wallet_address as sender or receiver"""
