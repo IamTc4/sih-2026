@@ -1,68 +1,165 @@
-version: '3.8'
+# ============================================================
+# CryptoSentinel — Docker Compose (Production)
+# ============================================================
+# Usage:
+#   docker compose --env-file .env.docker up --build
+#   docker compose --env-file .env.docker up -d          # detached
+#   docker compose down                                  # stop all
+#   docker compose logs -f blockchain                    # tail logs
+# ============================================================
 
 services:
+  # ---- 1. Blockchain Forensics Service ----
   blockchain:
     build:
       context: ./blockchain
+      dockerfile: Dockerfile
     container_name: walletrace-blockchain
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
       - HOST=0.0.0.0
-      - USE_MOCK_DATA=true
+      - USE_MOCK_DATA=${USE_MOCK_DATA:-true}
+      - TRONGRID_API_KEY=${TRONGRID_API_KEY:-}
+      - TRON_GRID_BASE_URL=${TRON_GRID_BASE_URL:-https://api.trongrid.io}
+      - TRONSCAN_BASE_URL=${TRONSCAN_BASE_URL:-https://apilist.tronscanapi.com/api}
+      - MAX_TRANSACTIONS_PER_WALLET=${MAX_TRANSACTIONS_PER_WALLET:-50}
+      - MAX_HOPS=${MAX_HOPS:-4}
+      - FLOW_THRESHOLD_PERCENT=${FLOW_THRESHOLD_PERCENT:-10.0}
+      - MIN_USDT_AMOUNT=${MIN_USDT_AMOUNT:-1.0}
+      - DEBUG_MODE=false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - walletrace-net
     restart: unless-stopped
 
+  # ---- 2. Agentic AI Orchestration Service ----
   agentic-ai:
     build:
       context: ./Agentic_Ai
+      dockerfile: Dockerfile
     container_name: walletrace-agentic-ai
     ports:
       - "8001:8001"
     environment:
       - PORT=8001
       - HOST=0.0.0.0
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-gemini-1.5-pro}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.75}
       - BLOCKCHAIN_API_URL=http://blockchain:8000
       - ML_API_URL=http://ml-risk:8002
       - CYBERSECURITY_API_URL=http://cybersecurity:8003
-      - CONFIDENCE_THRESHOLD=0.75
     depends_on:
-      - blockchain
-      - ml-risk
-      - cybersecurity
+      blockchain:
+        condition: service_healthy
+      ml-risk:
+        condition: service_healthy
+      cybersecurity:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - walletrace-net
     restart: unless-stopped
 
+  # ---- 3. ML Risk Scoring Service ----
   ml-risk:
     build:
       context: ./ML
+      dockerfile: Dockerfile
     container_name: walletrace-ml-risk
     ports:
       - "8002:8002"
     environment:
       - PORT=8002
       - HOST=0.0.0.0
+      - MODEL_PATH=${MODEL_PATH:-ml/data/model.pkl}
+      - HIGH_CONFIDENCE_THRESHOLD=${HIGH_CONFIDENCE_THRESHOLD:-0.75}
+      - MEDIUM_CONFIDENCE_THRESHOLD=${MEDIUM_CONFIDENCE_THRESHOLD:-0.45}
+      - BEHAVIORAL_SIMILARITY_THRESHOLD=${BEHAVIORAL_SIMILARITY_THRESHOLD:-0.85}
+      - BLOCKCHAIN_API_URL=http://blockchain:8000
+      - CYBERSECURITY_API_URL=http://cybersecurity:8003
+      - DEBUG_MODE=false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - walletrace-net
     restart: unless-stopped
 
+  # ---- 4. Cybersecurity & Threat Intelligence Service ----
   cybersecurity:
     build:
       context: ./Cybersecurity
+      dockerfile: Dockerfile
     container_name: walletrace-cybersecurity
     ports:
       - "8003:8003"
     environment:
       - PORT=8003
       - HOST=0.0.0.0
+    volumes:
+      - cybersecurity-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - walletrace-net
     restart: unless-stopped
 
+  # ---- 5. Dashboard (React + Nginx Reverse Proxy) ----
   dashboard:
     build:
       context: ./Dashboard
+      dockerfile: Dockerfile
     container_name: walletrace-dashboard
     ports:
       - "3000:3000"
     depends_on:
-      - blockchain
-      - agentic-ai
-      - ml-risk
-      - cybersecurity
+      blockchain:
+        condition: service_healthy
+      agentic-ai:
+        condition: service_healthy
+      ml-risk:
+        condition: service_healthy
+      cybersecurity:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - walletrace-net
     restart: unless-stopped
+
+# ---- Networks ----
+networks:
+  walletrace-net:
+    driver: bridge
+    name: walletrace-network
+
+# ---- Volumes ----
+volumes:
+  cybersecurity-data:
+    name: walletrace-cybersecurity-data

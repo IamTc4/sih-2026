@@ -1,0 +1,59 @@
+# ============================================================
+# .dockerignore — CryptoSentinel
+# Keep Docker build contexts lean
+# ============================================================
+
+# Version control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+*.egg-info
+*.egg
+.installed.cfg
+.Python
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Environment secrets (injected via docker-compose env_file)
+.env
+.env.*
+!.env.example
+!.env.docker
+
+# Node.js (Dashboard)
+node_modules/
+dist/
+build/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Documentation & backups
+*.md
+!README.md
+blockchain_old_backup/
+SIH_26-27/
+
+# Docker files themselves
+Dockerfile
+docker-compose*.yml
